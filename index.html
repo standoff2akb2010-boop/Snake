@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Змейка — HTML5</title>
+<style>
+  :root {
+    --text: #dbeafe;
+    --muted: #7a93ad;
+    --green: #4ade80;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 16px;
+    color: var(--text);
+    font-family: "Segoe UI", Roboto, system-ui, -apple-system, sans-serif;
+    background:
+      radial-gradient(1100px 700px at 15% -10%, #14263f 0%, transparent 60%),
+      radial-gradient(900px 650px at 110% 110%, #0e3226 0%, transparent 55%),
+      #070d17;
+    overflow-x: hidden;
+  }
+
+  .game {
+    width: min(100%, 600px);
+    margin: auto 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* ---------- header ---------- */
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: clamp(16px, 4vw, 20px);
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #d8fbe8;
+    text-shadow: 0 0 24px rgba(74, 222, 128, 0.35);
+  }
+
+  .title::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 12px var(--green), 0 0 28px rgba(74, 222, 128, 0.6);
+  }
+
+  .hud {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card {
+    min-width: 74px;
+    padding: 6px 11px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 197, 255, 0.12);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.015));
+    text-align: right;
+  }
+
+  .card .k {
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .card .v {
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .icon-btn {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    font-size: 16px;
+    color: var(--text);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(148, 197, 255, 0.14);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.08s ease;
+  }
+
+  .icon-btn:hover { background: rgba(255, 255, 255, 0.1); }
+  .icon-btn:active { transform: scale(0.94); }
+
+  /* ---------- board ---------- */
+  .board-wrap {
+    position: relative;
+    padding: 8px;
+    border-radius: 20px;
+    background: linear-gradient(160deg, rgba(74, 222, 128, 0.22), rgba(56, 189, 248, 0.1) 45%, rgba(255, 255, 255, 0.03));
+    box-shadow:
+      0 30px 80px -34px rgba(0, 0, 0, 0.95),
+      0 0 0 1px rgba(148, 197, 255, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 14px;
+    background: #0a1424;
+    touch-action: none;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 8px;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 24px;
+    text-align: center;
+    background: rgba(7, 13, 23, 0.72);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+  }
+
+  .overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .ov-title {
+    font-size: clamp(24px, 6vw, 34px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    color: #eafff4;
+    text-shadow: 0 0 30px rgba(74, 222, 128, 0.4);
+  }
+
+  .ov-text {
+    max-width: 34ch;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+
+  .ov-text b { color: var(--green); font-size: 16px; }
+
+  .btn {
+    margin-top: 6px;
+    padding: 11px 26px;
+    font: inherit;
+    font-weight: 700;
+    color: #06251a;
+    background: linear-gradient(180deg, #86efac, #22c55e);
+    border: 0;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 12px 26px -10px rgba(34, 197, 94, 0.85);
+    transition: filter 0.15s ease, transform 0.08s ease;
+  }
+
+  .btn:hover { filter: brightness(1.07); }
+  .btn:active { transform: translateY(1px) scale(0.99); }
+
+  /* ---------- controls ---------- */
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .hint {
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    color: #cfe3f5;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+  }
+
+  .dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 54px);
+    grid-template-rows: repeat(3, 54px);
+    gap: 6px;
+    flex: 0 0 auto;
+  }
+
+  .dpad button {
+    display: grid;
+    place-items: center;
+    font-size: 19px;
+    color: #d4ecff;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(148, 197, 255, 0.14);
+    border-radius: 13px;
+    cursor: pointer;
+    touch-action: none;
+    transition: background 0.12s ease, transform 0.08s ease;
+  }
+
+  .dpad button:active {
+    background: rgba(74, 222, 128, 0.25);
+    transform: scale(0.95);
+  }
+
+  .dpad [data-dir="0,-1"] { grid-area: 1 / 2; }
+  .dpad [data-dir="-1,0"] { grid-area: 2 / 1; }
+  .dpad [data-action]    { grid-area: 2 / 2; }
+  .dpad [data-dir="1,0"]  { grid-area: 2 / 3; }
+  .dpad [data-dir="0,1"]  { grid-area: 3 / 2; }
+
+  @media (hover: hover) and (pointer: fine) {
+    .game { width: min(100%, 600px, calc(100dvh - 190px)); }
+    .dpad { display: none; }
+    .controls { justify-content: center; text-align: center; }
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    .hint { display: none; }
+    .controls { justify-content: center; }
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 14px 12px; }
+    .dpad { grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(3, 48px); }
+    .card { min-width: 64px; padding: 5px 9px; }
+    .card .v { font-size: 17px; }
+    .hint { font-size: 11.5px; }
+  }
+</style>
+</head>
+<body>
+  <div class="game">
+    <header class="top">
+      <div class="title">Змейка</div>
+      <div class="hud">
+        <div class="card">
+          <div class="k">Счёт</div>
+          <div class="v" id="score">0</div>
+        </div>
+        <div class="card">
+          <div class="k">Рекорд</div>
+          <div class="v" id="best">0</div>
+        </div>
+        <button class="icon-btn" id="muteBtn" type="button" aria-label="Звук">🔊</button>
+        <button class="icon-btn" id="pauseBtn" type="button" aria-label="Пауза">⏸</button>
+      </div>
+    </header>
+
+    <div class="board-wrap">
+      <canvas id="board" width="600" height="600" aria-label="Игровое поле змейки"></canvas>
+      <div class="overlay show" id="overlay">
+        <div class="ov-title" id="ovTitle">Змейка</div>
+        <p class="ov-text" id="ovText">
+          Собирайте яблоки и не врезайтесь в стены и в себя.
+        </p>
+        <button class="btn" id="ovBtn" type="button">Играть</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="hint">
+        <kbd>←</kbd> <kbd>↑</kbd> <kbd>↓</kbd> <kbd>→</kbd> или <kbd>WASD</kbd> — движение<br>
+        <kbd>Space</kbd> — пауза · <kbd>R</kbd> — заново
+      </div>
+      <div class="dpad">
+        <button type="button" data-dir="0,-1" aria-label="Вверх">▲</button>
+        <button type="button" data-dir="-1,0" aria-label="Влево">◀</button>
+        <button type="button" data-action="pause" aria-label="Пауза">⏸</button>
+        <button type="button" data-dir="1,0" aria-label="Вправо">▶</button>
+        <button type="button" data-dir="0,1" aria-label="Вниз">▼</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ---------------- настройки ---------------- */
+  const COLS = 20;
+  const ROWS = 20;
+  const SIZE = 600;                 // логический размер поля (px)
+  const CELL = SIZE / COLS;         // 30px
+  const BEST_KEY = 'snake-best-score';
+  const MUTE_KEY = 'snake-muted';
+
+  // безопасная работа с localStorage (приватный режим и т.п.)
+  function readStore(key) {
+    try { return localStorage.getItem(key); } catch (_) { return null; }
+  }
+  function writeStore(key, value) {
+    try { localStorage.setItem(key, value); } catch (_) { /* не критично */ }
+  }
+
+  /* ---------------- DOM ---------------- */
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const overlay = document.getElementById('overlay');
+  const ovTitle = document.getElementById('ovTitle');
+  const ovText = document.getElementById('ovText');
+  const ovBtn = document.getElementById('ovBtn');
+  const muteBtn = document.getElementById('muteBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+
+  // чёткость на Retina
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = SIZE * dpr;
+  canvas.height = SIZE * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  /* ---------------- состояние ---------------- */
+  const game = {
+    phase: 'ready',            // ready | running | paused | over | won
+    snake: [],
+    prev: [],
+    dir: { x: 1, y: 0 },
+    queue: [],
+    food: { x: 15, y: 10 },
+    score: 0,
+    best: Number(readStore(BEST_KEY)) || 0,
+    acc: 0,                    // аккумулятор шага
+    last: 0,                   // время последнего кадра
+    particles: [],
+  };
+
+  let lastFrame = performance.now();
+  let audioCtx = null;
+  let muted = readStore(MUTE_KEY) === '1';
+
+  /* ---------------- звук ---------------- */
+  function tone(freq, dur = 0.12, type = 'sine', vol = 0.06, freqEnd) {
+    if (muted) return;
+    try {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        audioCtx = new AC();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t);
+      if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, t + dur);
+      gain.gain.setValueAtTime(vol, t);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + dur + 0.03);
+    } catch (_) { /* звук не критичен */ }
+  }
+
+  function syncMute() {
+    muteBtn.textContent = muted ? '🔇' : '🔊';
+    muteBtn.setAttribute('aria-label', muted ? 'Включить звук' : 'Выключить звук');
+  }
+
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    writeStore(MUTE_KEY, muted ? '1' : '0');
+    syncMute();
+    if (!muted) tone(520, 0.08, 'sine', 0.05);
+  });
+
+  /* ---------------- игровые функции ---------------- */
+  const stepInterval = () => Math.max(72, 150 - game.score * 2.6);
+
+  function reset() {
+    const cx = Math.floor(COLS / 2);
+    const cy = Math.floor(ROWS / 2);
+    game.snake = [
+      { x: cx,     y: cy },
+      { x: cx - 1, y: cy },
+      { x: cx - 2, y: cy },
+      { x: cx - 3, y: cy },
+    ];
+    game.prev = game.snake.map(s => ({ ...s }));
+    game.dir = { x: 1, y: 0 };
+    game.queue = [];
+    game.score = 0;
+    game.acc = 0;
+    game.particles = [];
+    scoreEl.textContent = '0';
+    spawnFood();
+  }
+
+  function spawnFood() {
+    const free = [];
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        if (!game.snake.some(s => s.x === x && s.y === y)) free.push({ x, y });
+      }
+    }
+    if (!free.length) { win(); return; }
+    game.food = free[Math.floor(Math.random() * free.length)];
+  }
+
+  function turn(x, y) {
+    const ref = game.queue.length ? game.queue[game.queue.length - 1] : game.dir;
+    if (ref.x === -x && ref.y === -y) return;   // разворот запрещён
+    if (ref.x === x && ref.y === y) return;     // уже туда
+    if (game.queue.length < 2) game.queue.push({ x, y });
+  }
+
+  function step() {
+    if (game.queue.length) game.dir = game.queue.shift();
+
+    const head = {
+      x: game.snake[0].x + game.dir.x,
+      y: game.snake[0].y + game.dir.y,
+    };
+
+    // стены
+    if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
+      gameOver();
+      return;
+    }
+
+    const growing = head.x === game.food.x && head.y === game.food.y;
+    const limit = game.snake.length - (growing ? 0 : 1);
+
+    // собственный хвост
+    for (let i = 0; i < limit; i++) {
+      if (game.snake[i].x === head.x && game.snake[i].y === head.y) {
+        gameOver();
+        return;
+      }
+    }
+
+    game.prev = game.snake.map(s => ({ ...s }));
+    game.snake.unshift(head);
+
+    if (growing) {
+      game.score++;
+      scoreEl.textContent = game.score;
+      burst(game.food.x, game.food.y);
+      tone(660, 0.09, 'square', 0.05, 990);
+      spawnFood();
+    } else {
+      game.snake.pop();
+    }
+  }
+
+  function burst(cx, cy) {
+    for (let i = 0; i < 14; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = 1.2 + Math.random() * 3.2;
+      game.particles.push({
+        x: cx + 0.5,
+        y: cy + 0.5,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp,
+        life: 0,
+        max: 320 + Math.random() * 260,
+        size: 1.6 + Math.random() * 2.8,
+        hue: 8 + Math.random() * 40,
+      });
+    }
+  }
+
+  /* ---------------- фазы ---------------- */
+  function showOverlay(title, html, btn) {
+    ovTitle.textContent = title;
+    ovText.innerHTML = html;
+    ovBtn.textContent = btn;
+    overlay.classList.add('show');
+    pauseBtn.textContent = '⏸';
+  }
+
+  function hideOverlay() {
+    overlay.classList.remove('show');
+    pauseBtn.textContent = '⏸';
+  }
+
+  function start() {
+    reset();
+    game.phase = 'running';
+    game.last = performance.now();
+    game.acc = 0;
+    hideOverlay();
+    tone(520, 0.09, 'sine', 0.05, 780);
+  }
+
+  function pause() {
+    if (game.phase !== 'running') return;
+    game.phase = 'paused';
+    showOverlay('Пауза', 'Отдохните немного. Продолжите, когда будете готовы.', 'Продолжить');
+    pauseBtn.textContent = '▶';
+  }
+
+  function resume() {
+    if (game.phase !== 'paused') return;
+    game.phase = 'running';
+    game.last = performance.now();
+    hideOverlay();
+    ovBtn.blur();
+  }
+
+  function togglePause() {
+    if (game.phase === 'running') pause();
+    else if (game.phase === 'paused') resume();
+    else if (game.phase === 'ready' || game.phase === 'over' || game.phase === 'won') start();
+  }
+
+  function saveBest() {
+    if (game.score > game.best) {
+      game.best = game.score;
+      writeStore(BEST_KEY, String(game.best));
+    }
+    bestEl.textContent = game.best;
+  }
+
+  function gameOver() {
+    game.phase = 'over';
+    game.acc = 0;
+    saveBest();
+    showOverlay(
+      'Игра окончена',
+      `Ваш счёт: <b>${game.score}</b><br>Рекорд: <b>${game.best}</b>`,
+      'Играть заново'
+    );
+    tone(240, 0.35, 'sawtooth', 0.07, 70);
+  }
+
+  function win() {
+    game.phase = 'won';
+    saveBest();
+    showOverlay(
+      'Победа!',
+      `Вы заполнили всё поле! Счёт: <b>${game.score}</b>`,
+      'Играть заново'
+    );
+    tone(660, 0.12, 'sine', 0.06, 1320);
+  }
+
+  /* ---------------- отрисовка ---------------- */
+  function roundRect(c, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function drawBoard() {
+    ctx.clearRect(0, 0, SIZE, SIZE);
+
+    const bg = ctx.createRadialGradient(SIZE * 0.5, SIZE * 0.15, 0, SIZE * 0.5, SIZE * 0.55, SIZE * 0.9);
+    bg.addColorStop(0, '#12233c');
+    bg.addColorStop(0.6, '#0c1829');
+    bg.addColorStop(1, '#081120');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(130, 180, 230, 0.055)';
+    for (let i = 1; i < COLS; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * CELL, 0);
+      ctx.lineTo(i * CELL, SIZE);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(0, i * CELL);
+      ctx.lineTo(SIZE, i * CELL);
+      ctx.stroke();
+    }
+  }
+
+  function drawFood(now) {
+    if (game.phase === 'won') return;
+
+    const fx = (game.food.x + 0.5) * CELL;
+    const fy = (game.food.y + 0.5) * CELL;
+    const pulse = 1 + 0.07 * Math.sin(now / 170);
+
+    // расходящееся кольцо
+    const rt = (now % 1500) / 1500;
+    ctx.beginPath();
+    ctx.arc(fx, fy, CELL * 0.36 + rt * CELL * 0.6, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(248, 113, 113, ${0.32 * (1 - rt)})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const r = CELL * 0.31 * pulse;
+    const grad = ctx.createRadialGradient(fx - r * 0.35, fy - r * 0.4, r * 0.1, fx, fy, r * 1.2);
+    grad.addColorStop(0, '#fecaca');
+    grad.addColorStop(0.38, '#f87171');
+    grad.addColorStop(1, '#b91c1c');
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(248, 113, 113, 0.8)';
+    ctx.shadowBlur = CELL * 0.85;
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(fx, fy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // блик
+    ctx.beginPath();
+    ctx.arc(fx - r * 0.3, fy - r * 0.36, r * 0.22, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.fill();
+  }
+
+  function drawSnake() {
+    const len = game.snake.length;
+    const interval = stepInterval();
+    let p = 0;
+    if (game.phase === 'running' || game.phase === 'paused') {
+      p = Math.min(game.acc / interval, 1);
+    } else if (game.phase === 'over' || game.phase === 'won') {
+      p = 1;
+    }
+
+    for (let i = len - 1; i >= 0; i--) {
+      const cur = game.snake[i];
+      const old = game.prev[i] || game.prev[game.prev.length - 1] || cur;
+
+      const x = (old.x + (cur.x - old.x) * p + 0.5) * CELL;
+      const y = (old.y + (cur.y - old.y) * p + 0.5) * CELL;
+
+      const t = len > 1 ? i / (len - 1) : 0;
+      const size = CELL * (0.9 - 0.14 * t);
+
+      ctx.save();
+      if (i === 0) {
+        ctx.shadowColor = 'rgba(74, 222, 128, 0.55)';
+        ctx.shadowBlur = CELL * 0.55;
+      }
+      ctx.fillStyle = i === 0
+        ? '#8cf5c0'
+        : `hsl(${152 + 18 * t}, ${68 - 20 * t}%, ${56 - 24 * t}%)`;
+
+      roundRect(ctx, x - size / 2, y - size / 2, size, size, size * 0.32);
+      ctx.fill();
+      ctx.restore();
+
+      // глаза на голове
+      if (i === 0) {
+        const d = game.dir;
+        const px = -d.y;
+        const py = d.x;
+        for (const s of [-1, 1]) {
+          const ex = x + d.x * size * 0.14 + px * s * size * 0.19;
+          const ey = y + d.y * size * 0.14 + py * s * size * 0.19;
+          ctx.beginPath();
+          ctx.arc(ex, ey, size * 0.11, 0, Math.PI * 2);
+          ctx.fillStyle = '#07251a';
+          ctx.fill();
+        }
+      }
+    }
+  }
+
+  function drawParticles(dt) {
+    for (let i = game.particles.length - 1; i >= 0; i--) {
+      const pt = game.particles[i];
+      pt.life += dt;
+      if (pt.life >= pt.max) {
+        game.particles.splice(i, 1);
+        continue;
+      }
+
+      const k = dt / 1000;
+      pt.x += pt.vx * k;
+      pt.y += pt.vy * k;
+      pt.vx *= 0.93;
+      pt.vy = pt.vy * 0.93 + 2.2 * k;
+
+      const a = 1 - pt.life / pt.max;
+      ctx.globalAlpha = a;
+      ctx.fillStyle = `hsl(${pt.hue}, 90%, 66%)`;
+      ctx.beginPath();
+      ctx.arc(pt.x * CELL, pt.y * CELL, pt.size * (0.6 + a * 0.8), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function draw(now) {
+    const dt = Math.min(now - lastFrame, 50) || 16;
+    lastFrame = now;
+
+    drawBoard();
+    drawFood(now);
+    drawSnake();
+    drawParticles(dt);
+  }
+
+  /* ---------------- главный цикл ---------------- */
+  function loop(now) {
+    requestAnimationFrame(loop);
+
+    if (game.phase === 'running') {
+      game.acc += Math.min(now - game.last, 100);
+      game.last = now;
+
+      let guard = 0;
+      while (game.phase === 'running' && game.acc >= stepInterval() && guard++ < 5) {
+        game.acc -= stepInterval();
+        step();
+      }
+      if (game.phase !== 'running') game.acc = 0;
+    } else {
+      game.last = now;
+    }
+
+    draw(now);
+  }
+
+  /* ---------------- управление ---------------- */
+  const KEYS = {
+    ArrowUp:    [0, -1], KeyW: [0, -1],
+    ArrowDown:  [0,  1], KeyS: [0,  1],
+    ArrowLeft:  [-1, 0], KeyA: [-1, 0],
+    ArrowRight: [1,  0], KeyD: [1,  0],
+  };
+
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+    const dir = KEYS[e.code];
+    if (dir) {
+      e.preventDefault();
+      if (game.phase === 'ready') start();
+      if (game.phase === 'running') turn(dir[0], dir[1]);
+      return;
+    }
+
+    if (e.code === 'Space') {
+      e.preventDefault();
+      togglePause();
+      return;
+    }
+
+    if (e.code === 'Escape') {
+      e.preventDefault();
+      if (game.phase === 'running') pause();
+      else if (game.phase === 'paused') resume();
+      return;
+    }
+
+    if (e.code === 'KeyR' || e.code === 'Enter') {
+      e.preventDefault();
+      start();
+    }
+  }, { passive: false });
+
+  // кнопки интерфейса
+  ovBtn.addEventListener('click', () => {
+    ovBtn.blur();
+    if (game.phase === 'paused') resume();
+    else start();
+  });
+
+  // клик по затемнённому фону — начать или продолжить
+  overlay.addEventListener('click', (e) => {
+    if (e.target !== overlay) return;
+    if (game.phase === 'paused') resume();
+    else start();
+  });
+
+  pauseBtn.addEventListener('click', () => {
+    pauseBtn.blur();
+    togglePause();
+  });
+
+  document.querySelectorAll('[data-dir]').forEach((btn) => {
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const [x, y] = btn.dataset.dir.split(',').map(Number);
+      if (game.phase === 'ready') start();
+      if (game.phase === 'running') turn(x, y);
+    });
+  });
+
+  document.querySelectorAll('[data-action="pause"]').forEach((btn) => {
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      togglePause();
+    });
+  });
+
+  // свайпы по полю
+  let touchStart = null;
+  canvas.addEventListener('pointerdown', (e) => {
+    touchStart = { x: e.clientX, y: e.clientY };
+    if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    if (!touchStart) return;
+    const dx = e.clientX - touchStart.x;
+    const dy = e.clientY - touchStart.y;
+    touchStart = null;
+
+    if (Math.hypot(dx, dy) < 22) {
+      if (game.phase === 'ready') start();
+      return;
+    }
+
+    if (game.phase === 'ready') start();
+    if (game.phase !== 'running') return;
+
+    if (Math.abs(dx) > Math.abs(dy)) turn(Math.sign(dx), 0);
+    else turn(0, Math.sign(dy));
+  });
+
+  canvas.addEventListener('pointercancel', () => { touchStart = null; });
+
+  // пауза при уходе со страницы
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && game.phase === 'running') pause();
+  });
+
+  /* ---------------- старт ---------------- */
+  bestEl.textContent = game.best;
+  syncMute();
+  reset();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
